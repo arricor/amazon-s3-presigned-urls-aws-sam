@@ -28,27 +28,35 @@ exports.handler = async (event) => {
 }
 
 const getUploadURL = async function(event) {
-  const randomID = parseInt(Math.random() * 10000000)
-  const Key = `${randomID}.jpg`
+  const filename = event["queryStringParameters"]['filename']
+  const filetype = event["queryStringParameters"]['filetype']
 
-  // Get signed URL from S3
-  const s3Params = {
-    Bucket: process.env.UploadBucket,
-    Key,
-    Expires: URL_EXPIRATION_SECONDS,
-    ContentType: 'image/jpeg',
+  if (filetype == 'image/jpeg' || filetype == 'image/png'){
+    const Key = filename
 
-    // This ACL makes the uploaded object publicly readable. You must also uncomment
-    // the extra permission for the Lambda function in the SAM template.
+    // Get signed URL from S3
+    const s3Params = {
+      Bucket: process.env.UploadBucket,
+      Key,
+      Expires: URL_EXPIRATION_SECONDS,
+      ContentType: filetype,
 
-    // ACL: 'public-read'
+      // This ACL makes the uploaded object publicly readable. You must also uncomment
+      // the extra permission for the Lambda function in the SAM template.
+
+      ACL: 'public-read'
+    }
+
+    console.log('Params: ', s3Params)
+    const uploadURL = await s3.getSignedUrlPromise('putObject', s3Params)
+
+    return JSON.stringify({
+      uploadURL: uploadURL,
+      Key
+    })
+  }else{
+    return JSON.stringify({
+      status: "filetype must equal image/jpeg or image/png."
+    })
   }
-
-  console.log('Params: ', s3Params)
-  const uploadURL = await s3.getSignedUrlPromise('putObject', s3Params)
-
-  return JSON.stringify({
-    uploadURL: uploadURL,
-    Key
-  })
 }
